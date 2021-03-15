@@ -11,7 +11,7 @@ module.exports = async function (context, req) {
     {
         let amount = req.body.amount;
         let baseURL = 'https://apim-racetrac-dev.azure-api.net/payments/v1/transactions';
-        
+
         let preauthResponse = await axios.post(baseURL, 
         {
             amount: amount,
@@ -28,10 +28,8 @@ module.exports = async function (context, req) {
             }
         })
         .catch(function (error) {
-            if (error.response) {
-                context.log.error("Preauth request was failed. Status code " + error.response.status); 
-                throw new Error("Preauth request was failed.");
-            };
+            context.log.error("Preauth request was failed. Status code " + error.response.status); 
+            throw new Error("Preauth request was failed.");
         });
 
         let transactionIdentifier = preauthResponse.data.transactionIdentifier;
@@ -54,10 +52,8 @@ module.exports = async function (context, req) {
             }
         })
         .catch(function (error) {
-            if (error.response) {
-                context.log.error("Capture request was failed. Status code " + error.response.status); 
-                throw new Error("Capture request was failed.");
-            };
+            context.log.error("Capture request was failed. Status code " + error.response.status); 
+            throw new Error("Capture request was failed.");
         });
     }
     catch(exception)
