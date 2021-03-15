@@ -5,69 +5,60 @@ module.exports = async function (context, req) {
         .start();
 
     const { QueueClient, QueueServiceClient } = require("@azure/storage-queue");
-    const fetch = require("node-fetch");
+    const axios = require('axios');
 
     try
     {
         let amount = req.body.amount;
         let baseURL = 'https://apim-racetrac-dev.azure-api.net/payments/v1/transactions';
-        let preauthResponse = await fetch(baseURL, 
+        
+        let preauthResponse = await axios.post(baseURL, 
         {
-            method: 'POST',
-            headers: {
-            'Content-Type': 'application/json;charset=utf-8'
-            },
-            body: JSON.stringify(
-            {
-                "amount": amount,
-                "data": {
-                "payeezy": {
-                    "gateway": "fuelVip",
-                    "cardToken": {
-                    "tokenValue": "2537446225198291",
-                    "cardType": "visa",
-                    "cardholderName": "JohnSmith",
-                    "expirationDate": "1030"
+            amount: amount,
+            data: {
+                payeezy: {
+                    gateway: "fuelVip",
+                    cardToken: {
+                        tokenValue: "2537446225198291",
+                        cardType: "visa",
+                        cardholderName: "JohnSmith",
+                        expirationDate: "1030"
                     }
                 }
-                }
-            })
+            }
+        })
+        .catch(function (error) {
+            if (error.response) {
+                context.log.error("Preauth request was failed. Status code " + error.response.status); 
+                throw new Error("Preauth request was failed.");
+            };
         });
 
-        if (!preauthResponse.ok)
-        {
-            context.log.error("Preauth request was failed. Status code " + preauthResponse.status); 
-            throw new Error("Preauth request was failed.");
-        }
+        let transactionIdentifier = preauthResponse.data.transactionIdentifier;
+        let transactionTag = preauthResponse.data.data.payeezy.transaction_tag;
 
-        let preauthResponseText = await preauthResponse.json();
-        let transactionIdentifier = preauthResponseText.transactionIdentifier;
-        let transactionTag = preauthResponseText.data.payeezy.transaction_tag;
-
-        let captureResponse = await fetch(baseURL + '/' + transactionIdentifier, 
+        axios.put(baseURL + '/' + transactionIdentifier, 
         {
-            method: 'PUT',
-            headers: {
-            'Content-Type': 'application/json;charset=utf-8',
-            'transactionType': 'capture'
-            },
-            body: JSON.stringify(
-                {
-                    "amount": amount,
-                    "data": {
-                      "payeezy": {
-                        "gateway": "fuelVip",
-                        "transactionTag": transactionTag
-                      }
-                    }
-                })
+            amount: amount,
+            data: {
+              payeezy: {
+                gateway: "fuelVip",
+                transactionTag: transactionTag
+              }
+            }
+        },
+        {
+            headers: { 
+                'Content-Type': 'application/json;charset=utf-8',
+                'transactionType': 'capture' 
+            }
+        })
+        .catch(function (error) {
+            if (error.response) {
+                context.log.error("Capture request was failed. Status code " + error.response.status); 
+                throw new Error("Capture request was failed.");
+            };
         });
-
-        if (!captureResponse.ok)
-        {
-            context.log.error("Capture request was failed. Status code " + captureResponse.status); 
-            throw new Error("Capture request was failed.");
-        }
     }
     catch(exception)
     {
