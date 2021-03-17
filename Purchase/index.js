@@ -28,7 +28,7 @@ module.exports = async function (context, req) {
             }
         })
         .catch(function (error) {
-            context.log.error("Preauth request was failed. Status code " + error.response.status); 
+            appInsights.defaultClient.trackException({ exception: error });
             throw new Error("Preauth request was failed.");
         });
 
@@ -52,14 +52,14 @@ module.exports = async function (context, req) {
             }
         })
         .catch(function (error) {
-            context.log.error("Capture request was failed. Status code " + error.response.status); 
+            appInsights.defaultClient.trackException({ exception: error });
             throw new Error("Capture request was failed.");
         });
     }
-    catch(exception)
+    catch(error)
     {
-        context.log.error("Purchase was failed.");
-        throw exception;
+        appInsights.defaultClient.trackException({ exception: error });
+        throw error;
     }
 
     context.log("Purchase was successful.");
